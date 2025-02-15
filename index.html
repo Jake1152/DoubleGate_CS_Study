@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스터디 소주제 랜덤 배정</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            font-size: 1.5em;
+        }
+        h3 {
+            margin-top: 30px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 150px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .example {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        #result {
+            margin-top: 30px;
+        }
+        /* 모바일 최적화 */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.3em;
+            }
+            th, td {
+                padding: 6px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>컴퓨터 과학책 스터디 소주제 배정</h1>
+        
+        <form id="assignment-form">
+            <label for="topics">소주제 목록:</label>
+            <textarea id="topics" placeholder="ch3.1, ch3.2, ch3.3, ..." required></textarea>
+            <div class="example">각 소주제를 쉼표(,), 세미콜론(;) 또는 줄바꿈으로 구분해서 입력하세요.</div>
+            
+            <label for="names">스터디 참가자 이름:</label>
+            <textarea id="names" placeholder="홍길동, 김철수, 이영희, ..." required></textarea>
+            <div class="example">각 이름을 쉼표(,), 세미콜론(;) 또는 줄바꿈으로 구분해서 입력하세요.</div>
+            
+            <button type="submit">랜덤 배정하기</button>
+        </form>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+    /**
+     * 컴퓨터 과학책 스터디의 소주제에 발표자를 랜덤으로 배정하는 프로그램
+     */
+    document.addEventListener('DOMContentLoaded', function() {
+        // 필요한 HTML 요소들 가져오기
+        const form = document.getElementById('assignment-form');
+        const topicInput = document.getElementById('topics');
+        const namesInput = document.getElementById('names');
+        const resultDiv = document.getElementById('result');
+
+        // 폼 제출 이벤트 리스너
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 입력값 가져오기
+            const topicsText = topicInput.value.trim();
+            const namesText = namesInput.value.trim();
+            
+            // 에러 체크
+            if (!topicsText) {
+                alert('소주제를 입력해주세요.');
+                return;
+            }
+            
+            if (!namesText) {
+                alert('참가자 이름을 입력해주세요.');
+                return;
+            }
+            
+            // 주제 목록 생성 (쉼표, 줄바꿈, 세미콜론으로 구분)
+            const topics = topicsText.split(/[\n,;]+/).map(topic => topic.trim()).filter(topic => topic !== '');
+            
+            // 이름 목록 생성 (쉼표, 줄바꿈, 세미콜론으로 구분)
+            const names = namesText.split(/[\n,;]+/).map(name => name.trim()).filter(name => name !== '');
+            
+            if (topics.length === 0) {
+                alert('유효한 소주제를 입력해주세요.');
+                return;
+            }
+            
+            if (names.length === 0) {
+                alert('유효한 참가자 이름을 입력해주세요.');
+                return;
+            }
+            
+            try {
+                // 랜덤 배정 실행
+                const assignments = assignRandomly(names, topics);
+                
+                // 결과 표시
+                displayResult(assignments, resultDiv);
+            } catch (error) {
+                console.error('Error during assignment:', error);
+                alert('배정 중 오류가 발생했습니다: ' + error.message);
+            }
+        });
+    });
+
+    /**
+     * 발표자를 주제에 랜덤으로 배정하는 함수
+     * @param {string[]} people - 참가자 명단
+     * @param {string[]} topics - 소주제 목록
+     * @returns {Object} 배정 결과
+     */
+    function assignRandomly(people, topics) {
+        const assignments = {};
+        const shuffledPeople = [...people];
+        
+        // 참가자 순서를 랜덤하게 섞기
+        for (let i = shuffledPeople.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledPeople[i], shuffledPeople[j]] = [shuffledPeople[j], shuffledPeople[i]];
+        }
+        
+        // 각 주제에 발표자 배정하기
+        for (let i = 0; i < topics.length; i++) {
+            const personIndex = i % shuffledPeople.length;
+            assignments[topics[i]] = shuffledPeople[personIndex];
+        }
+        
+        return assignments;
+    }
+
+    /**
+     * 배정 결과를 화면에 표시하는 함수
+     * @param {Object} assignments - 배정 결과
+     * @param {HTMLElement} resultDiv - 결과를 표시할 HTML 요소
+     */
+    function displayResult(assignments, resultDiv) {
+        // 기존 결과 초기화
+        resultDiv.innerHTML = '';
+        
+        // 소주제별 발표자 테이블
+        const topicHeader = document.createElement('h3');
+        topicHeader.textContent = '소주제별 발표자 배정 결과';
+        resultDiv.appendChild(topicHeader);
+        
+        const table = document.createElement('table');
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>소주제</th>
+                    <th>발표자</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        `;
+        
+        const tbody = table.querySelector('tbody');
+        
+        for (const [topic, person] of Object.entries(assignments)) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${topic}</td>
+                <td>${person}</td>
+            `;
+            tbody.appendChild(row);
+        }
+        
+        resultDiv.appendChild(table);
+        
+        // 각 참가자별 배정된 주제 모아보기
+        const personTopics = {};
+        for (const [topic, person] of Object.entries(assignments)) {
+            if (!personTopics[person]) {
+                personTopics[person] = [];
+            }
+            personTopics[person].push(topic);
+        }
+        
+        const personHeader = document.createElement('h3');
+        personHeader.textContent = '참가자별 배정 주제';
+        resultDiv.appendChild(personHeader);
+        
+        const summaryTable = document.createElement('table');
+        summaryTable.innerHTML = `
+            <thead>
+                <tr>
+                    <th>참가자</th>
+                    <th>배정된 주제</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        `;
+        
+        const summaryTbody = summaryTable.querySelector('tbody');
+        
+        for (const [person, topicList] of Object.entries(personTopics)) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${person}</td>
+                <td>${topicList.join(', ')}</td>
+            `;
+            summaryTbody.appendChild(row);
+        }
+        
+        resultDiv.appendChild(summaryTable);
+    }
+    </script>
+</body>
+</html>
