@@ -17,88 +17,67 @@
             padding: 20px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        h1 {
-            color: #333;
-            text-align: center;
-            font-size: 1.5em;
+        h1 { color: #333; text-align: center; font-size: 1.5em; margin-bottom: 30px; }
+        h3 { margin: 20px 0 10px; color: #333; }
+        .range-inputs {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
         }
-        h3 {
-            margin-top: 30px;
-            margin-bottom: 10px;
-            color: #333;
-        }
-        label {
-            display: block;
-            margin-top: 15px;
-            font-weight: bold;
-        }
-        input, textarea {
-            width: 100%;
+        input[type="number"] {
+            width: 100px;
             padding: 8px;
-            margin-top: 5px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            box-sizing: border-box;
         }
-        textarea {
-            height: 150px;
-            resize: vertical;
+        .participants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
         }
-        button {
+        .participant-btn {
+            background-color: #f0f0f0;
+            padding: 12px;
+            border-radius: 6px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .participant-btn:hover {
+            background-color: #e0e0e0;
+            transform: translateY(-2px);
+        }
+        .participant-btn.active {
             background-color: #4CAF50;
             color: white;
-            padding: 10px 15px;
+            border-color: #45a049;
+        }
+        .assign-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            margin-top: 20px;
             font-size: 16px;
             width: 100%;
+            margin-top: 20px;
         }
-        button:hover {
-            background-color: #45a049;
-        }
+        .assign-btn:hover { background-color: #45a049; }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
-            margin-bottom: 30px;
+            margin: 20px 0;
         }
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 12px;
             text-align: left;
         }
-        th {
-            background-color: #f2f2f2;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .example {
-            font-size: 0.9em;
-            color: #666;
-            margin-top: 5px;
-        }
-        #result {
-            margin-top: 30px;
-        }
-        /* 모바일 최적화 */
-        @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
-            .container {
-                padding: 15px;
-            }
-            h1 {
-                font-size: 1.3em;
-            }
-            th, td {
-                padding: 6px;
-                font-size: 0.9em;
-            }
-        }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
     </style>
 </head>
 <body>
@@ -106,181 +85,240 @@
         <h1>컴퓨터 과학책 스터디 소주제 배정</h1>
         
         <form id="assignment-form">
-            <label for="topics">소주제 목록:</label>
-            <textarea id="topics" placeholder="ch3.1, ch3.2, ch3.3, ..." required></textarea>
-            <div class="example">각 소주제를 쉼표(,), 세미콜론(;) 또는 줄바꿈으로 구분해서 입력하세요.</div>
+            <div class="range-inputs">
+                <input type="number" id="range-start" placeholder="시작 장" min="1" max="16" required>
+                <input type="number" id="range-end" placeholder="끝 장" min="1" max="16" required>
+            </div>
             
-            <label for="names">스터디 참가자 이름:</label>
-            <textarea id="names" placeholder="홍길동, 김철수, 이영희, ..." required></textarea>
-            <div class="example">각 이름을 쉼표(,), 세미콜론(;) 또는 줄바꿈으로 구분해서 입력하세요.</div>
+            <h3>참여자 선택</h3>
+            <div class="participants-grid" id="participants-grid"></div>
             
-            <button type="submit">랜덤 배정하기</button>
+            <button type="submit" class="assign-btn">랜덤 배정하기</button>
         </form>
         
         <div id="result"></div>
     </div>
 
     <script>
-    /**
-     * 컴퓨터 과학책 스터디의 소주제에 발표자를 랜덤으로 배정하는 프로그램
-     */
+    // 목차 데이터
+    const tableOfContents = {
+        1: ["1.1 변수", "1.2 복합 자료 구조", "1.3 배열", "1.4 문자열", "1.5 변수와 배열이 중요한 이유"],
+        2: ["2.1 문제 정의", "2.2 선형 스캔", "2.3 이진 탐색 알고리즘", "2.4 이진 탐색 적용하기", "2.5 실행 시간 045", "2.6 이진 탐색이 중요한 이유"],
+        3: ["3.1 배열의 한계", "3.2 포인터와 참조", "3.3 연결 리스트", "3.4 연결 리스트에 대한 연산", "3.5 이중 연결 리스트", "3.6 항목들의 배열과 연결 리스트", "3.7 연결 리스트가 중요한 이유"],
+        4: ["4.1 스택", "4.2 큐", "4.3 순서의 중요성", "4.4 스택과 큐가 중요한 이유"],
+        5: ["5.1 이진 탐색 트리 구조", "5.2 이진 탐색 트리에서 탐색하기", "5.3 이진 탐색 트리 변경하기", "5.4 균형이 맞지 않는 트리의 위험성", "5.5 이진 탐색 트리 대량 구축", "5.6 이진 탐색 트리가 중요한 이유"],
+        6: ["6.1 문자열로 이뤄진 이진 탐색 트리", "6.2 트라이 118", "6.3 트라이가 중요한 이유"],
+        7: ["7.1 우선순위 큐", "7.2 최대 힙", "7.3 우선순위 갱신하기", "7.4 최소 힙", "7.5 힙 정렬", "7.6 힙이 중요한 이유"],
+        8: ["8.1 최근접 이웃 탐색 소개", "8.2 격자", "8.3 격자에 대한 탐색", "8.4 격자 크기의 중요성", "8.5 2차원을 넘어", "8.6 공간 데이터를 넘어", "8.7 격자가 중요한 이유"],
+        9: ["9.1 쿼드 트리", "9.2 k-d 트리", "9.3 쿼드 트리와 k-d 트리가 중요한 이유"],
+        10: ["10.1 키를 사용한 저장과 탐색", "10.2 해시 테이블", "10.3 해시 함수", "10.4 해시 테이블이 중요한 이유"],
+        11: ["11.1 캐시 소개", "11.2 만료와 캐시", "11.3 다른 만료 전략들", "11.4 캐시가 중요한 이유"],
+        12: ["12.1 B-트리 구조", "12.2 B-트리 탐색하기", "12.3 키 삽입하기", "12.4 키 제거하기", "12.5 B-트리가 중요한 이유"],
+        13: ["13.1 블룸 필터 소개", "13.2 블룸 필터 매개변수 튜닝하기", "13.3 블룸 필터와 해시 테이블의 비교", "13.4 블룸 필터가 중요한 이유"],
+        14: ["14.1 무작위적 구조와 결정적인 구조의 비교", "14.2 스킵 리스트 소개", "14.3 실행 시간", "14.4 스킵 리스트가 중요한 이유"],
+        15: ["15.1 그래프 소개", "15.2 데이크스트라 알고리즘을 사용해 최단 경로 찾기", "15.3 프림의 알고리즘을 사용해 최소 스패닝 트리 찾기", "15.4 칸의 알고리즘을 이용한 위상 정렬", "15.5 그래프가 중요한 이유"],
+        16: ["16.1 데이터의 구조가 미치는 영향은 무엇인가?", "16.2 동적 자료 구조가 필요한가?", "16.3 분할 상환 비용이 무엇인가?", "16.4 어떻게 자료 구조를 구체적인 문제에 맞게 적응시킬 수 있을까?", "16.5 메모리와 실행 시간 사이의 트레이드오프란 무엇인가?", "16.6 자료 구조를 어떻게 튜닝할까?", "16.7 무작위화가 기대 동작에 미치는 영향은 어떤가?", "16.8 16장이 중요한 이유"]
+    };
+
     document.addEventListener('DOMContentLoaded', function() {
-        // 필요한 HTML 요소들 가져오기
         const form = document.getElementById('assignment-form');
-        const topicInput = document.getElementById('topics');
-        const namesInput = document.getElementById('names');
+        const participantsGrid = document.getElementById('participants-grid');
         const resultDiv = document.getElementById('result');
+        
+        // 기본 참여자 목록
+        const defaultParticipants = [
+            '너구리', '도키', '디제로', '란초',
+            '띤자', '미노민호', '이쿠맨'
+        ];
+
+        // 선택된 참여자를 저장하는 Set (기본적으로 모두 선택)
+        let selectedParticipants = new Set(defaultParticipants);
+
+        // 참여자 버튼 생성
+        function createParticipantButtons() {
+            participantsGrid.innerHTML = '';
+            defaultParticipants.forEach(participant => {
+                const btn = document.createElement('button');
+                btn.type = 'button'; // form submission 방지
+                btn.className = `participant-btn ${selectedParticipants.has(participant) ? 'active' : ''}`;
+                btn.textContent = participant;
+                btn.onclick = () => toggleParticipant(participant, btn);
+                participantsGrid.appendChild(btn);
+            });
+        }
+
+        // 참여자 토글
+        function toggleParticipant(participant, btn) {
+            if (selectedParticipants.has(participant)) {
+                selectedParticipants.delete(participant);
+                btn.classList.remove('active');
+            } else {
+                selectedParticipants.add(participant);
+                btn.classList.add('active');
+            }
+        }
+
+        // 장 범위에 해당하는 소주제 가져오기
+        function getTopicsForRange(start, end) {
+            const topics = [];
+            for (let chapter = start; chapter <= end; chapter++) {
+                if (tableOfContents[chapter]) {
+                    const chapterTopics = tableOfContents[chapter].map((topic, index) => ({
+                        id: `${chapter}.${index + 1}`,
+                        text: topic
+                    }));
+                    topics.push(...chapterTopics);
+                }
+            }
+            return topics;
+        }
+
+        // 랜덤 배정 (여러 주제를 받을 수 있는 사람도 랜덤하게)
+        function assignRandomly(people, topics) {
+            const shuffledPeople = [...people];
+            const shuffledTopics = [...topics];
+            const assignments = {};
+            
+            // 사람과 주제 모두 섞기
+            for (let i = shuffledPeople.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledPeople[i], shuffledPeople[j]] = [shuffledPeople[j], shuffledPeople[i]];
+            }
+            for (let i = shuffledTopics.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledTopics[i], shuffledTopics[j]] = [shuffledTopics[j], shuffledTopics[i]];
+            }
+            
+            // 주제 배정
+            shuffledTopics.forEach((topic, index) => {
+                const personIndex = index % shuffledPeople.length;
+                if (!assignments[topic.id]) {
+                    assignments[topic.id] = {
+                        topic: topic.text,
+                        person: shuffledPeople[personIndex]
+                    };
+                }
+            });
+            
+            return assignments;
+        }
+
+        // 결과 표시
+        function displayResult(assignments) {
+            resultDiv.innerHTML = '';
+            
+            // 소주제별 발표자 테이블
+            const topicHeader = document.createElement('h3');
+            topicHeader.textContent = '소주제별 발표자 배정 결과';
+            resultDiv.appendChild(topicHeader);
+            
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>번호</th>
+                        <th>소주제</th>
+                        <th>발표자</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            
+            const tbody = table.querySelector('tbody');
+            
+            Object.entries(assignments)
+                .sort((a, b) => {
+                    const [aId] = a;
+                    const [bId] = b;
+                    return aId.localeCompare(bId, undefined, {numeric: true});
+                })
+                .forEach(([id, {topic, person}]) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${id}</td>
+                        <td>${topic}</td>
+                        <td>${person}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            
+            resultDiv.appendChild(table);
+            
+            // 참가자별 배정된 주제
+            const personTopics = {};
+            Object.values(assignments).forEach(({topic, person}) => {
+                if (!personTopics[person]) {
+                    personTopics[person] = [];
+                }
+                personTopics[person].push(topic);
+            });
+            
+            const personHeader = document.createElement('h3');
+            personHeader.textContent = '참가자별 배정 주제';
+            resultDiv.appendChild(personHeader);
+            
+            const summaryTable = document.createElement('table');
+            summaryTable.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>참가자</th>
+                        <th>배정된 주제 수</th>
+                        <th>배정된 주제</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            
+            const summaryTbody = summaryTable.querySelector('tbody');
+            
+            Object.entries(personTopics).forEach(([person, topics]) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${person}</td>
+                    <td>${topics.length}</td>
+                    <td>${topics.join('<br>')}</td>
+                `;
+                summaryTbody.appendChild(row);
+            });
+            
+            resultDiv.appendChild(summaryTable);
+        }
 
         // 폼 제출 이벤트 리스너
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // 입력값 가져오기
-            const topicsText = topicInput.value.trim();
-            const namesText = namesInput.value.trim();
+            const start = parseInt(document.getElementById('range-start').value);
+            const end = parseInt(document.getElementById('range-end').value);
             
-            // 에러 체크
-            if (!topicsText) {
-                alert('소주제를 입력해주세요.');
+            if (!start || !end || start > end || start < 1 || end > 16) {
+                alert('올바른 장 범위를 입력해주세요 (1-16)');
                 return;
             }
-            
-            if (!namesText) {
-                alert('참가자 이름을 입력해주세요.');
+
+            if (selectedParticipants.size === 0) {
+                alert('최소 한 명의 참여자를 선택해주세요.');
                 return;
             }
-            
-            // 주제 목록 생성 (쉼표, 줄바꿈, 세미콜론으로 구분)
-            const topics = topicsText.split(/[\n,;]+/).map(topic => topic.trim()).filter(topic => topic !== '');
-            
-            // 이름 목록 생성 (쉼표, 줄바꿈, 세미콜론으로 구분)
-            const names = namesText.split(/[\n,;]+/).map(name => name.trim()).filter(name => name !== '');
-            
+
+            const topics = getTopicsForRange(start, end);
             if (topics.length === 0) {
-                alert('유효한 소주제를 입력해주세요.');
+                alert('선택된 장 범위에 해당하는 소주제가 없습니다.');
                 return;
             }
-            
-            if (names.length === 0) {
-                alert('유효한 참가자 이름을 입력해주세요.');
-                return;
-            }
-            
+
             try {
-                // 랜덤 배정 실행
-                const assignments = assignRandomly(names, topics);
-                
-                // 결과 표시
-                displayResult(assignments, resultDiv);
+                const assignments = assignRandomly(Array.from(selectedParticipants), topics);
+                displayResult(assignments);
             } catch (error) {
                 console.error('Error during assignment:', error);
                 alert('배정 중 오류가 발생했습니다: ' + error.message);
             }
         });
+
+        // 초기 참여자 버튼 생성 실행
+        createParticipantButtons();
     });
-
-    /**
-     * 발표자를 주제에 랜덤으로 배정하는 함수
-     * @param {string[]} people - 참가자 명단
-     * @param {string[]} topics - 소주제 목록
-     * @returns {Object} 배정 결과
-     */
-    function assignRandomly(people, topics) {
-        const assignments = {};
-        const shuffledPeople = [...people];
-        
-        // 참가자 순서를 랜덤하게 섞기
-        for (let i = shuffledPeople.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffledPeople[i], shuffledPeople[j]] = [shuffledPeople[j], shuffledPeople[i]];
-        }
-        
-        // 각 주제에 발표자 배정하기
-        for (let i = 0; i < topics.length; i++) {
-            const personIndex = i % shuffledPeople.length;
-            assignments[topics[i]] = shuffledPeople[personIndex];
-        }
-        
-        return assignments;
-    }
-
-    /**
-     * 배정 결과를 화면에 표시하는 함수
-     * @param {Object} assignments - 배정 결과
-     * @param {HTMLElement} resultDiv - 결과를 표시할 HTML 요소
-     */
-    function displayResult(assignments, resultDiv) {
-        // 기존 결과 초기화
-        resultDiv.innerHTML = '';
-        
-        // 소주제별 발표자 테이블
-        const topicHeader = document.createElement('h3');
-        topicHeader.textContent = '소주제별 발표자 배정 결과';
-        resultDiv.appendChild(topicHeader);
-        
-        const table = document.createElement('table');
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>소주제</th>
-                    <th>발표자</th>
-                </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        `;
-        
-        const tbody = table.querySelector('tbody');
-        
-        for (const [topic, person] of Object.entries(assignments)) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${topic}</td>
-                <td>${person}</td>
-            `;
-            tbody.appendChild(row);
-        }
-        
-        resultDiv.appendChild(table);
-        
-        // 각 참가자별 배정된 주제 모아보기
-        const personTopics = {};
-        for (const [topic, person] of Object.entries(assignments)) {
-            if (!personTopics[person]) {
-                personTopics[person] = [];
-            }
-            personTopics[person].push(topic);
-        }
-        
-        const personHeader = document.createElement('h3');
-        personHeader.textContent = '참가자별 배정 주제';
-        resultDiv.appendChild(personHeader);
-        
-        const summaryTable = document.createElement('table');
-        summaryTable.innerHTML = `
-            <thead>
-                <tr>
-                    <th>참가자</th>
-                    <th>배정된 주제</th>
-                </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        `;
-        
-        const summaryTbody = summaryTable.querySelector('tbody');
-        
-        for (const [person, topicList] of Object.entries(personTopics)) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${person}</td>
-                <td>${topicList.join(', ')}</td>
-            `;
-            summaryTbody.appendChild(row);
-        }
-        
-        resultDiv.appendChild(summaryTable);
-    }
     </script>
 </body>
 </html>
